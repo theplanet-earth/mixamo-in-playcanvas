@@ -1,23 +1,28 @@
 {
-    "name": "PlayCanvas Mixamo Vite",
-    "image": "mcr.microsoft.com/vscode/devcontainers/javascript-node:18",
-    "workspaceFolder": "/workspace",
-    "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
-    "forwardPorts": [8080],
-    "postCreateCommand": "npm install",
-    "features": {
-      "ghcr.io/devcontainers/features/docker-in-docker:2": {}
-    },
-    "customizations": {
-      "vscode": {
-        "extensions": [
-          "esbenp.prettier-vscode",
-          "dbaeumer.vscode-eslint"
-        ],
-        "settings": {
-          "terminal.integrated.shell.linux": "/bin/bash"
-        }
+  "name": "PlayCanvas Mixamo Vite",
+  "image": "mcr.microsoft.com/vscode/devcontainers/javascript-node:18",
+  "workspaceFolder": "/workspace",
+  "workspaceMount": "source=${localWorkspaceFolder},target=/workspace,type=bind,consistency=cached",
+  "forwardPorts": [8080],
+  
+  // install deps on first build
+  "postCreateCommand": "npm install",
+
+  // install (or re-install) deps every time you open/reopen
+  "postStartCommand": "npm install",
+
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "dbaeumer.vscode-eslint"
+      ],
+      "settings": {
+        "terminal.integrated.shell.linux": "/bin/bash"
       }
     }
   }
-  
+}
