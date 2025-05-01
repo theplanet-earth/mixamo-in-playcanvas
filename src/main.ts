@@ -35,12 +35,21 @@ app.root.addChild(root);
 // start the app
 app.start();
 
-// load Mixamo glTF model
-app.assets
-  .loadFromUrl('assets/mixamo_model.glb', 'container')
-  .then((asset: pc.Asset) => {
-    const modelRoot = (asset.resource as pc.ContainerResource).instantiateModelEntity();
+// load glTF
+app.assets.loadFromUrl('/assets/ybot.glb', 'container', (err, asset) => {
+    if (err) {
+      console.error('Failed to load model:', err);
+      return;
+    }
+    const modelRoot = (asset.resource as pc.ContainerResource)
+      .instantiateModelEntity();
+    
+    // position & scale
+    modelRoot.setLocalPosition(0, 0, 0);
     modelRoot.setLocalScale(1, 1, 1);
     app.root.addChild(modelRoot);
-  })
-  .catch(err => console.error('Failed to load model:', err));
+
+    // re‐aim camera
+    camera.setPosition(0, 2, 5);
+    camera.lookAt(0, 1, 0);//modelRoot.getPosition());
+  });

@@ -2,8 +2,8 @@ import { defineConfig } from 'vite';
 import path from 'path';
 
 export default defineConfig({
-  root: 'src',
-  base: './',
+  root: 'src',            // your HTML & TS still live here
+  publicDir: '../public', // ← serve this folder at the site root
   resolve: {
     alias: {
       '@': path.resolve(__dirname, 'src')
