@@ -10,9 +10,17 @@ const app = new pc.Application(canvas, {
   elementInput: new pc.ElementInput(canvas)
 });
 
-// fill the canvas on resize
-window.addEventListener('resize', () => app.resizeCanvas());
-app.resizeCanvas();
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  app.graphicsDevice.setResolution(canvas.width, canvas.height);
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 
 // set up basic scene
 const root = new pc.Entity();
