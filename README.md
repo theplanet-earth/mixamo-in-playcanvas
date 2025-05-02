@@ -44,6 +44,7 @@ Here below a detailed directory tree structure to help you navigate this project
 mixamo-in-playcanvas/
 ├── public/
 │   └── assets/
+│       ├── yessiree.glb
 │       └── ybot.glb
 ├── src/
 │   ├── index.html
@@ -249,3 +250,67 @@ Once the model is loaded, the camera is repositioned to frame it from above and 
 ---
 
 This entire script sets up a minimal but complete 3D rendering environment — programmatically — that can be used to **experiment with Mixamo rigging and animations directly in PlayCanvas**, with full control over every aspect of rendering and asset loading. 🎯
+
+---
+
+### 🎞️ Playing Mixamo Animations from `.glb`
+
+Once your Mixamo character (with animations, like `yessiree.glb`) is loaded, the next step is to **extract and play its embedded animations**. Mixamo exports `.glb` files with both the mesh and animation data bundled together — which PlayCanvas can use via its `AnimationComponent`.
+
+#### ✅ Make Sure the GLB Contains Animations
+
+Before playing any animation, ensure the Mixamo export was done with:
+
+* ✅ **"With Skin"** selected
+* ✅ **"Animation"** not removed during export
+* ✅ Use `.glb` format (not `.fbx`, unless you convert it)
+
+---
+
+### 🧩 Extract and Assign the Animation
+
+Right after instantiating the model entity, we can add animation logic like this:
+
+```ts
+// 🎬 Add animation component
+modelRoot.addComponent('animation', {
+  assets: container.animations,
+  activate: true,
+});
+
+// 🏃 Play the first available animation
+if (container.animations.length > 0) {
+  modelRoot.animation.play(container.animations[0].name, 0);
+} else {
+  console.warn('No animations found in container!');
+}
+```
+
+---
+
+### 🧠 What’s Happening Here?
+
+* **`container.animations`** contains all the animation clips embedded in the `.glb`.
+* We **add an `animation` component** to the character and assign the clips to it.
+* **`activate: true`** ensures the component is active and ready to play.
+* We **play the first animation** using `.play(name, blendTime)`. Set blendTime to `0` for instant playback.
+
+---
+
+### 🚫 Gotchas and Debug Tips
+
+* If `container.animations.length === 0` → double-check your Mixamo export.
+* Animation won't show if:
+
+  * the character has no skinning data
+  * no animation component was added
+* Blend times > 0 can cause delays or unexpected transitions on first play
+
+---
+
+### 🎉 Next Ideas
+
+* ⏺️ Switch between multiple Mixamo animations
+* 🔁 Loop or transition between animations
+* 🎮 Bind animations to user input (e.g., walk, jump, idle)
+* 🧩 Combine this with PlayCanvas `StateGraph` or custom FSM logic

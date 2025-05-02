@@ -43,21 +43,35 @@ app.root.addChild(root);
 // start the app
 app.start();
 
-// load glTF
-app.assets.loadFromUrl('/assets/ybot.glb', 'container', (err, asset) => {
-    if (err) {
-      console.error('Failed to load model:', err);
-      return;
-    }
-    const modelRoot = (asset.resource as pc.ContainerResource)
-      .instantiateModelEntity();
-    
-    // position & scale
-    modelRoot.setLocalPosition(0, 0, 0);
-    modelRoot.setLocalScale(1, 1, 1);
-    app.root.addChild(modelRoot);
+// Load and instantiate model
+app.assets.loadFromUrl('/assets/yessiree.glb', 'container', (err, asset) => {
+  if (err) {
+    console.error('Failed to load model:', err);
+    return;
+  }
 
-    // re‐aim camera
-    camera.setPosition(0, 2, 5);
-    camera.lookAt(0, 1, 0);//modelRoot.getPosition());
+  const container = asset.resource as pc.ContainerResource;
+  const modelRoot = container.instantiateModelEntity();
+
+    // position & scale
+  modelRoot.setLocalPosition(0, 0, 0);
+  modelRoot.setLocalScale(1, 1, 1);
+  app.root.addChild(modelRoot);
+
+  // 🎬 Add animation component
+  modelRoot.addComponent('animation', {
+    assets: container.animations,
+    activate: true,
   });
+
+  // 🏃 Play the first available animation
+  if (container.animations.length > 0) {
+    modelRoot.animation.play(container.animations[0].name, 0);
+  } else {
+    console.warn('No animations found in container!');
+  }
+
+  // 🎥 re‐aim camera to focus on the character
+  camera.setPosition(0, 2, 5);
+  camera.lookAt(0, 1, 0);
+});
