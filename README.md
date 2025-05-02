@@ -70,3 +70,182 @@ mixamo-in-playcanvas/
 
 By **avoiding the PlayCanvas web editor**, this project demystifies how the engine works under the hood and can serve as a **template for more complex, programmatically controlled WebGL experiences**. Perfect for developers looking to go beyond visual scripting and embrace full code-first control.
 
+Here’s what I would add to your `README.md` to **explain in detail what the `index.html` and `main.ts` files are doing**, quoting the most relevant lines and contextualizing them in the scope of this Mixamo + PlayCanvas engine study.
+
+---
+
+### 📄 Breakdown of the Code
+
+#### 🔹 `index.html` — Project Entry Point
+
+```html
+<canvas id="application"></canvas>
+```
+
+This defines the main HTML canvas where PlayCanvas will render the 3D scene. The canvas is styled to cover the full browser window:
+
+```html
+<style>body,html{margin:0;height:100%}canvas{width:100%;height:100%}</style>
+```
+
+This ensures the canvas stretches to fill the entire viewport — essential for immersive 3D experiences.
+
+```html
+<script type="module" src="./main.ts"></script>
+```
+
+We import our main logic written in TypeScript as a module, which will handle all rendering, scene creation, and model loading.
+
+---
+
+#### 🔹 `main.ts` — Application Logic and Scene Setup
+
+```ts
+import * as pc from 'playcanvas';
+```
+
+This imports the PlayCanvas engine as a module, unlocking all core APIs like `pc.Application`, `pc.Entity`, and `pc.Color`.
+
+```ts
+const canvas = document.getElementById('application') as HTMLCanvasElement;
+```
+
+We get a reference to the canvas element by ID so we can initialize the engine with it.
+
+---
+
+#### 🔧 Initialize the PlayCanvas Application
+
+```ts
+const app = new pc.Application(canvas, {
+  mouse: new pc.Mouse(canvas),
+  touch: new pc.TouchDevice(canvas),
+  elementInput: new pc.ElementInput(canvas)
+});
+```
+
+This creates a PlayCanvas application tied to our canvas. We also enable:
+
+* 🖱️ Mouse input
+* 🤏 Touch support
+* 🔤 Element input (useful for UI elements if added later)
+
+---
+
+#### 📐 Handle Canvas Resizing
+
+```ts
+function resizeCanvas() {
+  const dpr = window.devicePixelRatio || 1;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  app.graphicsDevice.setResolution(canvas.width, canvas.height);
+}
+```
+
+This function ensures the canvas is always correctly sized for high-DPI screens and adapts on window resize:
+
+```ts
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+```
+
+These lines ensure the canvas resizes initially and every time the window changes size, preserving a crisp visual experience on all devices.
+
+---
+
+#### 🏗️ Build the Scene Graph
+
+```ts
+const root = new pc.Entity();
+```
+
+Create a root node for our scene hierarchy — a good practice even in simple setups.
+
+##### 📷 Add a Camera
+
+```ts
+const camera = new pc.Entity();
+camera.addComponent('camera', { clearColor: new pc.Color(0.2, 0.2, 0.2) });
+camera.setPosition(0, 1.5, 3);
+```
+
+* Adds a camera with a neutral dark gray background
+* Positioned slightly above and in front of the scene
+* Will later be re-aimed to frame the model
+
+```ts
+root.addChild(camera);
+```
+
+Attach the camera to the scene graph.
+
+##### 💡 Add a Directional Light
+
+```ts
+const light = new pc.Entity();
+light.addComponent('light', { type: 'directional', intensity: 1 });
+light.setEulerAngles(45, 30, 0);
+```
+
+* A directional light (like sunlight) with full brightness
+* Rotated to shine diagonally for a dynamic look
+
+```ts
+root.addChild(light);
+```
+
+Add the light to the root as well.
+
+---
+
+#### 🚀 Start the Engine
+
+```ts
+app.root.addChild(root);
+app.start();
+```
+
+Adds the root entity (with camera and light) to the scene and starts the main game loop (`update`, `render`, etc.).
+
+---
+
+#### 📦 Load and Display Mixamo Model
+
+```ts
+app.assets.loadFromUrl('/assets/ybot.glb', 'container', (err, asset) => {
+```
+
+This loads a `ybot.glb` file (a rigged Mixamo character) as a container, which includes both the model and animations.
+
+```ts
+const modelRoot = (asset.resource as pc.ContainerResource).instantiateModelEntity();
+```
+
+Instantiates the actual 3D model entity from the GLB container.
+
+```ts
+modelRoot.setLocalPosition(0, 0, 0);
+modelRoot.setLocalScale(1, 1, 1);
+```
+
+Places the model at the origin and gives it a standard scale.
+
+```ts
+app.root.addChild(modelRoot);
+```
+
+Adds the model to the scene so it's rendered.
+
+```ts
+camera.setPosition(0, 2, 5);
+camera.lookAt(0, 1, 0);
+```
+
+Once the model is loaded, the camera is repositioned to frame it from above and in front, then aimed at the character's center.
+
+---
+
+This entire script sets up a minimal but complete 3D rendering environment — programmatically — that can be used to **experiment with Mixamo rigging and animations directly in PlayCanvas**, with full control over every aspect of rendering and asset loading. 🎯
