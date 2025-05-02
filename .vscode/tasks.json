@@ -1,0 +1,30 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "🚀 Start Dev Server",
+        "type": "shell",
+        "command": "npm run dev",
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "detail": "Launch the Vite development server with hot module reload enabled on port 8080 🔥"
+      },
+      {
+        "label": "🏗️ Build for Production",
+        "type": "shell",
+        "command": "npm run build",
+        "group": "build",
+        "detail": "Bundle and optimize the app for production. Output goes to the /dist directory 📦"
+      },
+      {
+        "label": "🔍 Preview Production Build",
+        "type": "shell",
+        "command": "npm run preview",
+        "group": "test",
+        "detail": "Serve the built app locally to test the production build before deployment 🌐"
+      }
+    ]
+  }
+  
