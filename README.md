@@ -314,3 +314,69 @@ if (container.animations.length > 0) {
 * 🔁 Loop or transition between animations
 * 🎮 Bind animations to user input (e.g., walk, jump, idle)
 * 🧩 Combine this with PlayCanvas `StateGraph` or custom FSM logic
+
+---
+
+### 🕹️ Simple Idle/Walking Animation Toggle
+
+Now that you're able to play a Mixamo animation, let’s **toggle between an idle and a walking animation** using the **spacebar**.
+
+This example assumes your `.glb` file contains both **Idle** and **Walking** animations — either as separate `.glb` clips merged together during import or added manually in Blender or PlayCanvas.
+
+---
+
+### ✅ Update Code to Handle Animation State
+
+Replace your existing animation section with the following logic:
+
+```ts
+// Add animation component
+modelRoot.addComponent('animation', {
+  assets: container.animations,
+  activate: true,
+});
+
+// Store animation names
+const idleClip = container.animations.find(a => a.name === 'merged.glb/animation/0');
+const walkClip = container.animations.find(a => a.name === 'merged.glb/animation/1');
+
+if (!idleClip || !walkClip) {
+  console.warn('Idle or Walking animation not found!');
+} else {
+  // Start in idle state
+  modelRoot.animation.play(idleClip.name, 0.2);
+
+  let isWalking = false;
+
+  // Toggle on spacebar
+  window.addEventListener('keydown', (e) => {
+    if (e.code === 'Space') {
+      isWalking = !isWalking;
+      const nextAnim = isWalking ? walkClip.name : idleClip.name;
+      modelRoot.animation.play(nextAnim, 0.2);
+    }
+  });
+}
+```
+
+---
+
+### 🧠 How It Works
+
+* We **search the list of animations** for clips with "idle" and "walking" in their names.
+* The character **starts in the idle animation**.
+* When you press **Space**, it **toggles to walking**, and pressing again **returns to idle**.
+* Animations are blended smoothly with a **0.2s transition**.
+
+> ✅ Tip: You can log `container.animations.map(a => a.name)` to check clip names if unsure.
+
+---
+
+### 🔄 Suggested Workflow
+
+If your GLB file only has one animation:
+
+1. Export multiple animations from Mixamo as separate `.fbx` files.
+2. Use Blender to combine them into one `.glb` file with multiple named actions.
+3. Export to glTF (`.glb`) with animations split properly.
+4. Test your toggle in the browser!

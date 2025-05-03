@@ -44,7 +44,7 @@ app.root.addChild(root);
 app.start();
 
 // Load and instantiate model
-app.assets.loadFromUrl('/assets/yessiree.glb', 'container', (err, asset) => {
+app.assets.loadFromUrl('/assets/merged.glb', 'container', (err, asset) => {
   if (err) {
     console.error('Failed to load model:', err);
     return;
@@ -53,7 +53,11 @@ app.assets.loadFromUrl('/assets/yessiree.glb', 'container', (err, asset) => {
   const container = asset.resource as pc.ContainerResource;
   const modelRoot = container.instantiateModelEntity();
 
-    // position & scale
+  console.log('🧩 Model root:', modelRoot);
+  console.log('🎞️ Animation assets:', container.animations);
+  console.log('🎬 Available animations:', container.animations.map(a => a.name));
+
+  // position & scale
   modelRoot.setLocalPosition(0, 0, 0);
   modelRoot.setLocalScale(1, 1, 1);
   app.root.addChild(modelRoot);
@@ -64,11 +68,28 @@ app.assets.loadFromUrl('/assets/yessiree.glb', 'container', (err, asset) => {
     activate: true,
   });
 
-  // 🏃 Play the first available animation
-  if (container.animations.length > 0) {
-    modelRoot.animation.play(container.animations[0].name, 0);
+  // Store animation names
+  const idleClip = container.animations.find(a => a.name === 'merged.glb/animation/0');
+  const walkClip = container.animations.find(a => a.name === 'merged.glb/animation/1');
+
+  if (!idleClip) {
+    console.warn('Idle animation not found!');
+  } else if (!walkClip) {
+    console.warn('Walking animation not found!');
   } else {
-    console.warn('No animations found in container!');
+    // Start in idle state
+    modelRoot.animation.play(idleClip.name, 0.2);
+
+    let isWalking = false;
+
+    // 🏃 Toggle on spacebar
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space') {
+        isWalking = !isWalking;
+        const nextAnim = isWalking ? walkClip.name : idleClip.name;
+        modelRoot.animation.play(nextAnim, 0.2);
+      }
+    });
   }
 
   // 🎥 re‐aim camera to focus on the character
