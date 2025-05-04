@@ -43,3 +43,51 @@ Create a helper `prepare.py` for such tasks, but **note**: Blender doesn't use `
 | Animation merging        | ✅                  |
 | Redundant object cleanup | ✅                  |
 | Compatible with venv     | ✅ (external tasks) |
+
+---
+
+## ✅ New Behavior
+
+You'll now run the script like this:
+
+```bash
+blender --background --python merge_glb.py -- ./input_glbs merged.glb
+```
+
+Where:
+
+* `./input_glbs/` contains any number of `.glb` files (`idle.glb`, `walk.glb`, `jump.glb`, etc.)
+* Each animation (Action, Track, Strip) is renamed using the filename (`idle`, `walk`, `jump`, ...).
+* All animations are merged into a single file: `merged.glb`.
+
+---
+
+## 🧠 Script Logic
+
+* Loop over all `.glb` files in the given directory (sorted for determinism).
+* Use the filename (without extension) as the animation label.
+* Import the `.glb`, rename its animation data to that label.
+* Keep the first imported mesh/armature; delete the others but keep their animations.
+* Export everything to the specified `.glb` output.
+
+---
+
+## ✅ Example Usage
+
+```bash
+blender --background --python merge_glb.py -- ./animations merged.glb
+```
+
+Where `./animations/` contains:
+
+```
+idle.glb
+walk.glb
+run.glb
+jump.glb
+```
+
+The output `merged.glb` will contain:
+
+* Geometry from `idle.glb`
+* 4 clean animations named: `idle`, `walk`, `run`, `jump`

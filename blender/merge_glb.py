@@ -1,12 +1,13 @@
 import bpy
 import sys
 import os
+import glob
 
 def clear_scene():
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
 def import_and_label_animations(filepath, label):
-    print(f"\nImporting {filepath} and labeling animations as '{label}'")
+    print(f"\n📦 Importing {filepath} as animation '{label}'")
     bpy.ops.import_scene.gltf(filepath=filepath)
     imported_objects = bpy.context.selected_objects
 
@@ -37,27 +38,33 @@ def import_and_label_animations(filepath, label):
 def print_actions():
     print("\n=== FINAL ACTIONS IN SCENE ===")
     for action in bpy.data.actions:
-        print(f"Action: {action.name}")
+        print(f"  🎬 Action: {action.name}")
 
-def main(first_path, second_path, output_path):
-    print(f"First GLB: {first_path}")
-    print(f"Second GLB: {second_path}")
-    print(f"Output: {output_path}")
-
+def main(glb_dir, output_path):
     clear_scene()
 
-    # Just extract "idle" and "walking" from the filenames
-    label_1 = os.path.splitext(os.path.basename(first_path))[0].lower()
-    label_2 = os.path.splitext(os.path.basename(second_path))[0].lower()
+    glb_files = sorted(glob.glob(os.path.join(glb_dir, "*.glb")))
+    if not glb_files:
+        print(f"No .glb files found in directory: {glb_dir}")
+        sys.exit(1)
 
-    imported_1 = import_and_label_animations(first_path, label_1)
-    imported_2 = import_and_label_animations(second_path, label_2)
+    print(f"🔍 Found {len(glb_files)} .glb files in {glb_dir}")
+
+    keep_objects = []
+
+    for idx, glb_path in enumerate(glb_files):
+        label = os.path.splitext(os.path.basename(glb_path))[0].lower()
+        imported_objects = import_and_label_animations(glb_path, label)
+
+        if idx == 0:
+            # Keep the geometry of the first imported glb
+            keep_objects.extend(imported_objects)
+        else:
+            # Remove all geometry, keep only animation data
+            for obj in imported_objects:
+                bpy.data.objects.remove(obj, do_unlink=True)
 
     print_actions()
-
-    # Cleanup second imported objects (we already retained animations)
-    for obj in imported_2:
-        bpy.data.objects.remove(obj, do_unlink=True)
 
     print(f"\n💾 Exporting to: {output_path}")
     bpy.ops.export_scene.gltf(filepath=output_path, export_format='GLB', export_animations=True)
@@ -70,8 +77,8 @@ if __name__ == "__main__":
     else:
         argv = []
 
-    if len(argv) != 3:
-        print("Usage: blender --background --python merge_glb.py -- <first.glb> <second.glb> <output.glb>")
+    if len(argv) != 2:
+        print("Usage: blender --background --python merge_glb.py -- <input_glb_dir> <output.glb>")
         sys.exit(1)
 
-    main(argv[0], argv[1], argv[2])
+    main(argv[0], argv[1])
