@@ -68,26 +68,80 @@ app.assets.loadFromUrl('/assets/merged.glb', 'container', (err, asset) => {
     activate: true,
   });
 
-  // Store animation names
-  const idleClip = container.animations.find(a => a.name === 'merged.glb/animation/0');
-  const walkClip = container.animations.find(a => a.name === 'merged.glb/animation/1');
+  // Setup animation map
+  const animMap: Record<string, pc.Asset | undefined> = {
+    idle: container.animations.find(a => a.name.toLowerCase().includes('merged.glb/animation/0')),
+    walk: container.animations.find(a => a.name.toLowerCase().includes('merged.glb/animation/1')),
+    yessiree: container.animations.find(a => a.name.toLowerCase().includes('merged.glb/animation/2')),
+  };
 
-  if (!idleClip) {
-    console.warn('Idle animation not found!');
-  } else if (!walkClip) {
-    console.warn('Walking animation not found!');
+  if (!animMap.idle || !animMap.walk || !animMap.yessiree) {
+    console.warn('Missing expected animations:', animMap);
   } else {
-    // Start in idle state
-    modelRoot.animation.play(idleClip.name, 0.2);
+    // Ensure correct loop settings
+    animMap.idle.resource.loop = true;
+    animMap.walk.resource.loop = true;
+    animMap.yessiree.resource.loop = false;
 
-    let isWalking = false;
+    let currentAnim = 'idle';
+    let walkPressed = false;
+    let playingYessiree = false;
 
-    // 🏃 Toggle on spacebar
+    const play = (name: string, blend = 0.2) => {
+      if (currentAnim !== name && animMap[name]) {
+        modelRoot.animation.play(animMap[name].name, blend);
+        currentAnim = name;
+      }
+    };
+
+    // Start with idle
+    play('idle');
+
     window.addEventListener('keydown', (e) => {
+      if (e.code === 'ArrowDown') {
+        walkPressed = true;
+
+        // Down arrow always takes precedence, even during yessiree
+        if (playingYessiree) {
+          playingYessiree = false; // cancel current flow
+        }
+
+        play('walk');
+      }
+
       if (e.code === 'Space') {
-        isWalking = !isWalking;
-        const nextAnim = isWalking ? walkClip.name : idleClip.name;
-        modelRoot.animation.play(nextAnim, 0.2);
+        if (!playingYessiree) {
+          playingYessiree = true;
+
+          // Override animation loop for this special case
+          modelRoot.animation.loop = false;
+          play('yessiree', 0.2);
+
+          // Use time-based manual trigger to detect end of animation
+          const duration = animMap.yessiree.resource.duration;
+          console.log('Yessiree duration (sec):', animMap.yessiree.resource.duration);
+          setTimeout(() => {
+            playingYessiree = false;
+
+            // Restore default loop behavior
+            modelRoot.animation.loop = true;
+
+            if (walkPressed) {
+              play('walk');
+            } else {
+              play('idle');
+            }
+          }, duration * 1000);
+        }
+      }
+    });
+
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'ArrowDown') {
+        walkPressed = false;
+        if (!playingYessiree) {
+          play('idle');
+        }
       }
     });
   }
