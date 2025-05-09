@@ -459,3 +459,204 @@ You can add this if you're unsure how long your yessiree animation is:
 ```ts
 console.log('Yessiree duration (sec):', animMap.yessiree.resource.duration);
 ```
+
+---
+
+### 🧠 Core FSM Design
+
+We'll:
+
+* Encapsulate states (`idle`, `walk`, `yessiree`) and transitions in a `StateMachine` object.
+* Let the FSM handle all animation changes.
+* Handle input events by simply calling `fsm.transition('walk')`, etc.
+* Auto-return to `idle` when `yessiree` finishes.
+* Support `walk` interrupting everything — including `yessiree`.
+
+---
+
+## ✅ Refactored `main.ts` FSM Version (Replace the logic inside `if (!animMap.idle || ...)`)
+
+```ts
+// Ensure correct loop settings
+animMap.idle.resource.loop = true;
+animMap.walk.resource.loop = true;
+animMap.yessiree.resource.loop = false;
+
+modelRoot.animation.loop = true;
+
+// Finite State Machine
+class StateMachine {
+  current: string = 'idle';
+  walkPressed: boolean = false;
+  isPlayingSpecial: boolean = false;
+
+  play(name: string, blend: number = 0.2, loop: boolean = true) {
+    if (this.current === name) return;
+    modelRoot.animation.loop = loop;
+    modelRoot.animation.play(animMap[name].name, blend);
+    this.current = name;
+  }
+
+  transition(to: string) {
+    if (to === 'walk') {
+      // Walk always takes over
+      this.isPlayingSpecial = false;
+      this.play('walk');
+    } else if (to === 'idle') {
+      if (!this.isPlayingSpecial && this.current !== 'idle') {
+        this.play('idle');
+      }
+    } else if (to === 'yessiree') {
+      if (this.isPlayingSpecial) return; // Don't stack spacebar presses
+
+      this.isPlayingSpecial = true;
+      this.play('yessiree', 0.2, false); // not looping
+
+      const duration = animMap.yessiree.resource.duration;
+      console.log('Yessiree duration (sec):', duration);
+
+      setTimeout(() => {
+        this.isPlayingSpecial = false;
+        // Decide what to return to
+        if (this.walkPressed) {
+          this.play('walk');
+        } else {
+          this.play('idle');
+        }
+      }, duration * 1000);
+    }
+  }
+}
+
+const fsm = new StateMachine();
+
+// Start in idle
+fsm.play('idle');
+
+// Inputs
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'ArrowDown') {
+    fsm.walkPressed = true;
+    fsm.transition('walk');
+  }
+
+  if (e.code === 'Space') {
+    fsm.transition('yessiree');
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  if (e.code === 'ArrowDown') {
+    fsm.walkPressed = false;
+    fsm.transition('idle');
+  }
+});
+```
+
+---
+
+## ✅ Behavior Recap (Fully FSM-Driven)
+
+* ✅ `fsm.transition('walk')` **always interrupts**
+* ✅ `fsm.transition('yessiree')` plays once, **only if not already playing**
+* ✅ When `yessiree` ends, **returns to walk if held**, or idle
+* ✅ `fsm.transition('idle')` **resets state only if not in a special animation**
+
+---
+
+## 🎯 Advantages of This FSM Pattern
+
+| Benefit                        | Why it matters                                         |
+| ------------------------------ | ------------------------------------------------------ |
+| 💡 Clear separation            | Input logic is now clean, stateful logic is abstracted |
+| 🔄 Easy to extend              | Add more states like `"jump"` or `"attack"` easily     |
+| 🧪 Reusable for other entities | Can apply FSM pattern to other animated models         |
+| 🔍 Easier to debug             | You know exactly what state you're in at any moment    |
+
+## 🔍 What’s happening?
+
+When you press the down arrow during `"yessiree"`:
+
+* It **interrupts** `"yessiree"` and starts `"walk"` immediately.
+* But... the `setTimeout` for `"yessiree"` is **still active** — and when it expires, it tells the FSM to transition (back to `"idle"` or `"walk"`), even though a new animation already started.
+
+This causes the second `"yessiree"` (after spacebar is pressed again) to:
+
+* **Re-use the previous timeout**
+* Or get interrupted mid-way if multiple triggers stack
+
+## ✅ Solution: Track the timeout and cancel it if interrupted
+
+We’ll store the `timeoutId` from `setTimeout()` and clear it anytime the animation is forcefully interrupted.
+
+### 🛠 Fix: Add timeout handling to your FSM class
+
+Update your `StateMachine` class as follows:
+
+```ts
+class StateMachine {
+  current: string = 'idle';
+  walkPressed: boolean = false;
+  isPlayingSpecial: boolean = false;
+  private specialTimeout: ReturnType<typeof setTimeout> | null = null;
+
+  play(name: string, blend: number = 0.2, loop: boolean = true) {
+    if (this.current === name) return;
+    modelRoot.animation.loop = loop;
+    modelRoot.animation.play(animMap[name].name, blend);
+    this.current = name;
+  }
+
+  cancelSpecialAnimation() {
+    if (this.specialTimeout !== null) {
+      clearTimeout(this.specialTimeout);
+      this.specialTimeout = null;
+      this.isPlayingSpecial = false;
+    }
+  }
+
+  transition(to: string) {
+    if (to === 'walk') {
+      // Walk always takes over
+      this.cancelSpecialAnimation();
+      this.play('walk');
+    } else if (to === 'idle') {
+      if (!this.isPlayingSpecial && this.current !== 'idle') {
+        this.play('idle');
+      }
+    } else if (to === 'yessiree') {
+      if (this.isPlayingSpecial) return;
+
+      this.isPlayingSpecial = true;
+      this.play('yessiree', 0.2, false);
+
+      const duration = animMap.yessiree.resource.duration;
+      console.log('Yessiree duration (sec):', duration);
+
+      // Store timeout so it can be canceled if interrupted
+      this.specialTimeout = setTimeout(() => {
+        this.isPlayingSpecial = false;
+        this.specialTimeout = null;
+
+        if (this.walkPressed) {
+          this.play('walk');
+        } else {
+          this.play('idle');
+        }
+      }, duration * 1000);
+    }
+  }
+}
+```
+
+---
+
+### ✅ Behavior Now
+
+* Pressing ⬇️ during `"yessiree"` interrupts it **and cancels the scheduled end**
+* Pressing space again will start a fresh `"yessiree"` without legacy timeout interference
+* Only one active `"yessiree"` timeout exists at any time
+
+---
+
+Let me know if you'd like to evolve this further into a full-featured FSM class with **event hooks (onEnter/onExit)** or **transition guards** — you're almost there!

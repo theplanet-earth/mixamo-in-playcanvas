@@ -83,65 +83,84 @@ app.assets.loadFromUrl('/assets/merged.glb', 'container', (err, asset) => {
     animMap.walk.resource.loop = true;
     animMap.yessiree.resource.loop = false;
 
-    let currentAnim = 'idle';
-    let walkPressed = false;
-    let playingYessiree = false;
+    modelRoot.animation.loop = true;
 
-    const play = (name: string, blend = 0.2) => {
-      if (currentAnim !== name && animMap[name]) {
+    // Finite State Machine
+    class StateMachine {
+      current: string = 'idle';
+      walkPressed: boolean = false;
+      isPlayingSpecial: boolean = false;
+      private specialTimeout: ReturnType<typeof setTimeout> | null = null;
+
+      play(name: string, blend: number = 0.2, loop: boolean = true) {
+        if (this.current === name) return;
+        modelRoot.animation.loop = loop;
         modelRoot.animation.play(animMap[name].name, blend);
-        currentAnim = name;
+        this.current = name;
       }
-    };
 
-    // Start with idle
-    play('idle');
-
-    window.addEventListener('keydown', (e) => {
-      if (e.code === 'ArrowDown') {
-        walkPressed = true;
-
-        // Down arrow always takes precedence, even during yessiree
-        if (playingYessiree) {
-          playingYessiree = false; // cancel current flow
+      cancelSpecialAnimation() {
+        if (this.specialTimeout !== null) {
+          clearTimeout(this.specialTimeout);
+          this.specialTimeout = null;
+          this.isPlayingSpecial = false;
         }
-
-        play('walk');
       }
 
-      if (e.code === 'Space') {
-        if (!playingYessiree) {
-          playingYessiree = true;
+      transition(to: string) {
+        if (to === 'walk') {
+          // Walk always takes over
+          this.cancelSpecialAnimation();
+          this.play('walk');
+        } else if (to === 'idle') {
+          if (!this.isPlayingSpecial && this.current !== 'idle') {
+            this.play('idle');
+          }
+        } else if (to === 'yessiree') {
+          if (this.isPlayingSpecial) return;
 
-          // Override animation loop for this special case
-          modelRoot.animation.loop = false;
-          play('yessiree', 0.2);
+          this.isPlayingSpecial = true;
+          this.play('yessiree', 0.2, false);
 
-          // Use time-based manual trigger to detect end of animation
           const duration = animMap.yessiree.resource.duration;
-          console.log('Yessiree duration (sec):', animMap.yessiree.resource.duration);
-          setTimeout(() => {
-            playingYessiree = false;
+          console.log('Yessiree duration (sec):', duration);
 
-            // Restore default loop behavior
-            modelRoot.animation.loop = true;
+          // Store timeout so it can be canceled if interrupted
+          this.specialTimeout = setTimeout(() => {
+            this.isPlayingSpecial = false;
+            this.specialTimeout = null;
 
-            if (walkPressed) {
-              play('walk');
+            if (this.walkPressed) {
+              this.play('walk');
             } else {
-              play('idle');
+              this.play('idle');
             }
           }, duration * 1000);
         }
+      }
+    }
+
+    const fsm = new StateMachine();
+
+    // Start in idle
+    fsm.play('idle');
+
+    // Inputs
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'ArrowDown') {
+        fsm.walkPressed = true;
+        fsm.transition('walk');
+      }
+
+      if (e.code === 'Space') {
+        fsm.transition('yessiree');
       }
     });
 
     window.addEventListener('keyup', (e) => {
       if (e.code === 'ArrowDown') {
-        walkPressed = false;
-        if (!playingYessiree) {
-          play('idle');
-        }
+        fsm.walkPressed = false;
+        fsm.transition('idle');
       }
     });
   }
