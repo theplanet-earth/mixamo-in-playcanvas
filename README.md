@@ -380,3 +380,82 @@ If your GLB file only has one animation:
 2. Use Blender to combine them into one `.glb` file with multiple named actions.
 3. Export to glTF (`.glb`) with animations split properly.
 4. Test your toggle in the browser!
+
+## ✅ Your New Requirements Implemented
+
+### 💡 Summary of Behavior:
+
+1. App starts in `"idle"` animation.
+2. Pressing the ⬇️ Down Arrow:
+
+   * **Always switches to `"walk"`**, regardless of what was playing.
+3. Releasing ⬇️ Down Arrow:
+
+   * **Always returns to `"idle"`**, no matter what was previously playing.
+4. Pressing **Spacebar**:
+
+   * **Plays `"yessiree"` once**, interrupting anything else (even walking).
+   * **Returns to `"idle"`** once the animation completes.
+   * **Down Arrow takes precedence** if pressed during or after.
+
+## 🚨 Why `loop = false` **alone does not stop** `yessiree` from looping
+
+In **PlayCanvas's `animation` component** (not `anim`), the `loop` flag on the `AnimationTrack` (i.e., `asset.resource.loop = false`) is *not respected* automatically unless you manually check for when the animation ends using a **time-based mechanism** or `update` listener — because `.once('end')` only fires **on blended out animations**, and sometimes not at all when `loop = false` is ignored or overridden internally.
+
+So, here's a guaranteed fix:
+
+## ✅ Robust Fix: Use `modelRoot.animation.loop = false` **before** playing the animation
+
+Instead of setting it on the asset's resource, set it on the **entity's animation component**, like this:
+
+```ts
+modelRoot.animation.loop = false;
+modelRoot.animation.play(animMap.yessiree.name, 0.1);
+```
+
+Then restore loop = true for idle/walk when switching back.
+
+## ✅ Final Working Code Snippet for `keydown: Space`
+
+Replace just the spacebar handling code with this:
+
+```ts
+if (e.code === 'Space') {
+  if (!playingYessiree) {
+    playingYessiree = true;
+
+    // Override animation loop for this special case
+    modelRoot.animation.loop = false;
+    play('yessiree', 0.1);
+
+    // Use time-based manual trigger to detect end of animation
+    const duration = animMap.yessiree.resource.duration;
+    setTimeout(() => {
+      playingYessiree = false;
+
+      // Restore default loop behavior
+      modelRoot.animation.loop = true;
+
+      if (walkPressed) {
+        play('walk');
+      } else {
+        play('idle');
+      }
+    }, duration * 1000);
+  }
+}
+```
+
+## 🧠 Why This Works
+
+* `modelRoot.animation.loop` actually affects **runtime behavior**
+* The `animation.play(...)` function does **not re-read the asset’s `loop` flag**
+* `setTimeout` works because we can read the `.duration` of the track in seconds
+
+## ⏱ Optional Debug Log
+
+You can add this if you're unsure how long your yessiree animation is:
+
+```ts
+console.log('Yessiree duration (sec):', animMap.yessiree.resource.duration);
+```
