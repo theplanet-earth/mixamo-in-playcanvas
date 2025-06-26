@@ -44,9 +44,7 @@ Create a helper `prepare.py` for such tasks, but **note**: Blender doesn't use `
 | Redundant object cleanup | ✅                  |
 | Compatible with venv     | ✅ (external tasks) |
 
----
-
-## ✅ New Behavior
+## ✅ New Behavior - multiple `.glb` files
 
 You'll now run the script like this:
 
@@ -60,9 +58,7 @@ Where:
 * Each animation (Action, Track, Strip) is renamed using the filename (`idle`, `walk`, `jump`, ...).
 * All animations are merged into a single file: `merged.glb`.
 
----
-
-## 🧠 Script Logic
+### 🧠 Script Logic
 
 * Loop over all `.glb` files in the given directory (sorted for determinism).
 * Use the filename (without extension) as the animation label.
@@ -70,9 +66,7 @@ Where:
 * Keep the first imported mesh/armature; delete the others but keep their animations.
 * Export everything to the specified `.glb` output.
 
----
-
-## ✅ Example Usage
+### ✅ Example Usage
 
 ```bash
 blender --background --python merge_glb.py -- ./animations merged.glb
@@ -91,3 +85,59 @@ The output `merged.glb` will contain:
 
 * Geometry from `idle.glb`
 * 4 clean animations named: `idle`, `walk`, `run`, `jump`
+
+## ✅ New Behavior - multiple `.fbx` files
+
+```bash
+# Merge all .glb files
+blender --background --python merge_glb.py -- ./animations merged.glb --type glb
+
+# Merge all .fbx files
+blender --background --python merge_glb.py -- ./animations merged.glb --type fbx
+```
+
+### ✅ Example Usage
+
+**1. Merge GLBs**
+
+```bash
+blender --background --python merge_glb.py -- ./animations merged.glb --type glb
+```
+
+**2. Merge FBXs**
+
+```bash
+blender --background --python merge_glb.py -- ./animations merged.glb --type fbx
+```
+
+### Expected sample output
+
+    ...
+
+    === FINAL ACTIONS IN SCENE ===
+    🎬 Action: ascending stairs
+    🎬 Action: descending stairs
+    🎬 Action: happy walk
+    🎬 Action: left strafe walking
+    🎬 Action: right strafe walking
+    🎬 Action: sad walk
+    🎬 Action: standard walk
+    🎬 Action: stop walking
+    🎬 Action: walk strafe left
+    🎬 Action: walk strafe right
+    🎬 Action: walking backwards
+    🎬 Action: walking up the stairs
+    🎬 Action: walking while texting
+
+    💾 Exporting to: merged.glb
+    19:29:23 | INFO: Draco mesh compression is available, use library at C:\Program Files\Blender Foundation\Blender 3.6\3.6\python\lib\site-packages\extern_draco.dll
+    19:29:23 | INFO: Starting glTF 2.0 export
+    19:29:23 | INFO: Extracting primitive: Alpha_Joints
+    19:29:24 | INFO: Primitives created: 1
+    19:29:24 | INFO: Extracting primitive: Alpha_Surface
+    19:29:24 | INFO: Primitives created: 1
+    19:34:50 | INFO: Finished glTF 2.0 export in 326.5166347026825 s
+
+    ✅ Export complete.
+
+    Blender quit

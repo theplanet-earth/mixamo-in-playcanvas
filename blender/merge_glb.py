@@ -6,9 +6,16 @@ import glob
 def clear_scene():
     bpy.ops.wm.read_factory_settings(use_empty=True)
 
-def import_and_label_animations(filepath, label):
+def import_and_label_animations(filepath, label, filetype):
     print(f"\n📦 Importing {filepath} as animation '{label}'")
-    bpy.ops.import_scene.gltf(filepath=filepath)
+    if filetype == "glb":
+        bpy.ops.import_scene.gltf(filepath=filepath)
+    elif filetype == "fbx":
+        bpy.ops.import_scene.fbx(filepath=filepath)
+    else:
+        print(f"Unsupported type: {filetype}")
+        return []
+
     imported_objects = bpy.context.selected_objects
 
     for obj in imported_objects:
@@ -40,28 +47,30 @@ def print_actions():
     for action in bpy.data.actions:
         print(f"  🎬 Action: {action.name}")
 
-def main(glb_dir, output_path):
+def main(glb_dir, output_path, filetype):
     clear_scene()
 
-    glb_files = sorted(glob.glob(os.path.join(glb_dir, "*.glb")))
-    if not glb_files:
-        print(f"No .glb files found in directory: {glb_dir}")
+    ext = ".glb" if filetype == "glb" else ".fbx"
+    file_list = sorted(glob.glob(os.path.join(glb_dir, f"*{ext}")))
+
+    if not file_list:
+        print(f"No *{ext} files found in directory: {glb_dir}")
         sys.exit(1)
 
-    print(f"🔍 Found {len(glb_files)} .glb files in {glb_dir}")
+    print(f"🔍 Found {len(file_list)} *{ext} files in {glb_dir}")
 
     keep_objects = []
 
-    for idx, glb_path in enumerate(glb_files):
-        label = os.path.splitext(os.path.basename(glb_path))[0].lower()
-        imported_objects = import_and_label_animations(glb_path, label)
+    for idx, filepath in enumerate(file_list):
+        label = os.path.splitext(os.path.basename(filepath))[0].lower()
+        imported = import_and_label_animations(filepath, label, filetype)
 
         if idx == 0:
-            # Keep the geometry of the first imported glb
-            keep_objects.extend(imported_objects)
+            # Keep the geometry of the first imported
+            keep_objects.extend(imported)
         else:
             # Remove all geometry, keep only animation data
-            for obj in imported_objects:
+            for obj in imported:
                 bpy.data.objects.remove(obj, do_unlink=True)
 
     print_actions()
@@ -77,8 +86,16 @@ if __name__ == "__main__":
     else:
         argv = []
 
-    if len(argv) != 2:
-        print("Usage: blender --background --python merge_glb.py -- <input_glb_dir> <output.glb>")
+    if len(argv) != 4 or argv[2] != "--type":
+        print("Usage: blender --background --python merge_glb.py -- <input_dir> <output.glb> --type <glb|fbx>")
         sys.exit(1)
 
-    main(argv[0], argv[1])
+    input_dir = argv[0]
+    output_file = argv[1]
+    filetype = argv[3].lower()
+
+    if filetype not in ("glb", "fbx"):
+        print("❌ Error: filetype must be 'glb' or 'fbx'")
+        sys.exit(1)
+
+    main(input_dir, output_file, filetype)
